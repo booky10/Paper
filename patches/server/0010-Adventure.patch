@@ -828,10 +828,10 @@ index 0000000000000000000000000000000000000000..2fd6c3e65354071af71c7d8ebb97b559
 +}
 diff --git a/src/main/java/io/papermc/paper/adventure/PaperAdventure.java b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..3dc613116c086444ece88bcb0a569eeea953074f
+index 0000000000000000000000000000000000000000..d1c649308ea72afc888f8ed53f1e8ec6deadef65
 --- /dev/null
 +++ b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
-@@ -0,0 +1,390 @@
+@@ -0,0 +1,391 @@
 +package io.papermc.paper.adventure;
 +
 +import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -977,6 +977,10 @@ index 0000000000000000000000000000000000000000..3dc613116c086444ece88bcb0a569eee
 +    // Component
 +
 +    public static Component asAdventure(final net.minecraft.network.chat.Component component) {
++        if (component instanceof AdventureComponent) {
++            // don't convert to json and back if already backed by an adventure Component
++            return ((AdventureComponent) component).adventure;
++        }
 +        return component == null ? Component.empty() : GsonComponentSerializer.gson().serializer().fromJson(net.minecraft.network.chat.Component.Serializer.toJsonTree(component), Component.class);
 +    }
 +
@@ -1023,10 +1027,7 @@ index 0000000000000000000000000000000000000000..3dc613116c086444ece88bcb0a569eee
 +    }
 +
 +    public static String asJsonString(final net.minecraft.network.chat.Component component, final Locale locale) {
-+        if (component instanceof AdventureComponent) {
-+            return asJsonString(((AdventureComponent) component).adventure, locale);
-+        }
-+        return net.minecraft.network.chat.Component.Serializer.toJson(component);
++        return asJsonString(asAdventure(component), locale);
 +    }
 +
 +    public static String asPlain(final Component component, final Locale locale) {
