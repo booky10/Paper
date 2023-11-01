@@ -828,10 +828,10 @@ index 0000000000000000000000000000000000000000..2fd6c3e65354071af71c7d8ebb97b559
 +}
 diff --git a/src/main/java/io/papermc/paper/adventure/PaperAdventure.java b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..d1c649308ea72afc888f8ed53f1e8ec6deadef65
+index 0000000000000000000000000000000000000000..db84d00997fe61ef4225613736a84dab784bb515
 --- /dev/null
 +++ b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
-@@ -0,0 +1,391 @@
+@@ -0,0 +1,401 @@
 +package io.papermc.paper.adventure;
 +
 +import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -1027,7 +1027,17 @@ index 0000000000000000000000000000000000000000..d1c649308ea72afc888f8ed53f1e8ec6
 +    }
 +
 +    public static String asJsonString(final net.minecraft.network.chat.Component component, final Locale locale) {
-+        return asJsonString(asAdventure(component), locale);
++        if (component instanceof AdventureComponent) {
++            return asJsonString(((AdventureComponent) component).adventure, locale);
++        }
++
++        // set locale to translate vanilla components
++        net.minecraft.network.chat.Component.Serializer.ADVENTURE_LOCALE.set(locale);
++        try {
++            return net.minecraft.network.chat.Component.Serializer.toJson(component);
++        } finally {
++            net.minecraft.network.chat.Component.Serializer.ADVENTURE_LOCALE.remove();
++        }
 +    }
 +
 +    public static String asPlain(final Component component, final Locale locale) {
@@ -1828,7 +1838,7 @@ index 887b9fd625aa23c4ec828a175d63695f915232d3..8152420b9c3eb1bf13c012dd43505d99
 +    // Paper end
  }
 diff --git a/src/main/java/net/minecraft/network/chat/Component.java b/src/main/java/net/minecraft/network/chat/Component.java
-index 1f1c75d8d155989e0f9f7ee63d217a60af20c3d4..b540ce21c65ad52ad7e94d2ca2b3926c0875bee1 100644
+index 1f1c75d8d155989e0f9f7ee63d217a60af20c3d4..692f1df0e0a2a0018426f7a60b994cdf93013646 100644
 --- a/src/main/java/net/minecraft/network/chat/Component.java
 +++ b/src/main/java/net/minecraft/network/chat/Component.java
 @@ -1,6 +1,7 @@
@@ -1847,14 +1857,35 @@ index 1f1c75d8d155989e0f9f7ee63d217a60af20c3d4..b540ce21c65ad52ad7e94d2ca2b3926c
              gsonbuilder.registerTypeHierarchyAdapter(Component.class, new Component.Serializer());
              gsonbuilder.registerTypeHierarchyAdapter(Style.class, new Style.Serializer());
              gsonbuilder.registerTypeAdapterFactory(new LowerCaseEnumTypeAdapterFactory());
-@@ -401,6 +403,7 @@ public interface Component extends Message, FormattedText, Iterable<Component> {
+@@ -400,7 +402,10 @@ public interface Component extends Message, FormattedText, Iterable<Component> {
+ 
          }
  
++        public static final ThreadLocal<java.util.Locale> ADVENTURE_LOCALE = ThreadLocal.withInitial(() -> null); // Paper - translations for vanilla components
++
          public JsonElement serialize(Component ichatbasecomponent, Type type, JsonSerializationContext jsonserializationcontext) {
 +            if (ichatbasecomponent instanceof AdventureComponent) return jsonserializationcontext.serialize(ichatbasecomponent); // Paper
              JsonObject jsonobject = new JsonObject();
  
              if (!ichatbasecomponent.getStyle().isEmpty()) {
+@@ -455,6 +460,17 @@ public interface Component extends Message, FormattedText, Iterable<Component> {
+ 
+                     jsonobject.add("with", jsonarray1);
+                 }
++
++                // Paper start - translations for vanilla components
++                final java.util.Locale locale = ADVENTURE_LOCALE.get();
++                if (locale != null) {
++                    final net.kyori.adventure.text.Component adventureComponent =
++                        net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().deserializeFromTree(jsonobject);
++                    final net.kyori.adventure.text.Component translatedComponent =
++                        net.kyori.adventure.translation.GlobalTranslator.render(adventureComponent, locale);
++                    return net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().serializeToTree(translatedComponent);
++                }
++                // Paper end
+             } else if (componentcontents instanceof ScoreContents) {
+                 ScoreContents scorecontents = (ScoreContents) componentcontents;
+                 JsonObject jsonobject1 = new JsonObject();
 diff --git a/src/main/java/net/minecraft/network/chat/ComponentUtils.java b/src/main/java/net/minecraft/network/chat/ComponentUtils.java
 index b6506e881ef337bfd2a7a0644296b48b7300a0f6..7daca712816a79cc4a30b084afbd3d07b5d3755f 100644
 --- a/src/main/java/net/minecraft/network/chat/ComponentUtils.java
