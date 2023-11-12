@@ -828,7 +828,7 @@ index 0000000000000000000000000000000000000000..2fd6c3e65354071af71c7d8ebb97b559
 +}
 diff --git a/src/main/java/io/papermc/paper/adventure/PaperAdventure.java b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..db84d00997fe61ef4225613736a84dab784bb515
+index 0000000000000000000000000000000000000000..a940c9957d2f1683dd1309c836baea2a7bf171d5
 --- /dev/null
 +++ b/src/main/java/io/papermc/paper/adventure/PaperAdventure.java
 @@ -0,0 +1,401 @@
@@ -977,9 +977,9 @@ index 0000000000000000000000000000000000000000..db84d00997fe61ef4225613736a84dab
 +    // Component
 +
 +    public static Component asAdventure(final net.minecraft.network.chat.Component component) {
-+        if (component instanceof AdventureComponent) {
++        if (component instanceof AdventureComponent advComponent) {
 +            // don't convert to json and back if already backed by an adventure Component
-+            return ((AdventureComponent) component).adventure;
++            return advComponent.adventure;
 +        }
 +        return component == null ? Component.empty() : GsonComponentSerializer.gson().serializer().fromJson(net.minecraft.network.chat.Component.Serializer.toJsonTree(component), Component.class);
 +    }
